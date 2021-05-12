@@ -6,17 +6,12 @@
 import requests
 import json
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
 def get_token(username, password):
     auth_url = "https://api.mangadex.org/auth/login"
     data = {"username": username, "password": password}
     response = requests.post(auth_url, json=data)
     print(response.json()["token"]["session"])
-    print("test commit")
+    print("Push Test")
 
 
 def retrieve_chapters(chapter_id):

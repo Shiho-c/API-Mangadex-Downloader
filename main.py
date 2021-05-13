@@ -6,12 +6,12 @@
 import requests
 import json
 
+print("commit testing")
 def get_token(username, password):
     auth_url = "https://api.mangadex.org/auth/login"
     data = {"username": username, "password": password}
     response = requests.post(auth_url, json=data)
     print(response.json()["token"]["session"])
-    print("Push Test")
 
 
 def retrieve_chapters(chapter_id):

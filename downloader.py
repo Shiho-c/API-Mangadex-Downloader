@@ -39,14 +39,15 @@ class Window(QMainWindow):
         response = requests.get(links["search"], params=params)
         print("searching {}".format(self.search_box.text()))
         results = response.json()["results"]
-        #print(results)
         for x in range(len(results)):
             self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]] = {}
             self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["id"] = results[x]["data"]["id"]
             self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["description"] = results[x]["data"]["attributes"]["description"]["en"]
             for b in find_nani:
                 self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]][b] = results[x]["data"]["attributes"][b]
-        print(self.searched_dict)
+        #print(self.searched_dict)
+        for titles in self.searched_dict:
+            self.list_widget.addItem(titles)
             
 
 
@@ -54,14 +55,14 @@ class Window(QMainWindow):
     def UiComponents(self):
   
         # creating a Widgets
-        list_widget = QListWidget(self)
+        self.list_widget = QListWidget(self)
         self.search_box = QLineEdit(self)
         search_button = QPushButton("bruh", self)
 
         # setting widgets coordinates
         self.search_box.setGeometry(0, 0, 100, 20)
         search_button.setGeometry(self.search_box.geometry().x() + self.search_box.geometry().width() + 20, 0, 100,20)
-        list_widget.setGeometry(0, self.search_box.geometry().x() + self.search_box.geometry().height() + 20, 150, 200)
+        self.list_widget.setGeometry(0, self.search_box.geometry().x() + self.search_box.geometry().height() + 20, 150, 200)
         
 
         #setting up buttons' functions
@@ -85,11 +86,11 @@ class Window(QMainWindow):
         scroll_bar.setStyleSheet("background : lightgreen;")
   
         # setting vertical scroll bar to it
-        list_widget.setVerticalScrollBar(scroll_bar)
+        self.list_widget.setVerticalScrollBar(scroll_bar)
   
   
         # getting vertical scroll bar
-        value = list_widget.verticalScrollBar()
+        value = self.list_widget.verticalScrollBar()
   
   
   

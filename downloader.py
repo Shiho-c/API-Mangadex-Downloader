@@ -5,8 +5,7 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtGui import * 
 from PyQt5.QtCore import * 
 from functools import partial
-from api_details import links
-from api_details import find_nani
+from api_details import links, find_nani, chapter_nani
 
 import sys
 import requests
@@ -29,12 +28,15 @@ class Window(QMainWindow):
   
         #no idea where to put variables
         self.searched_dict = {}
+        self.clicked_dict = {}
+        self.tmp_data_dict = {}
+        self.searched_chaps = {}
 
 
         # showing all the widgets
         self.show()
         
-    def clicked_search(self, value):
+    def clicked_search(self):
         params = {"limit":100, "title":self.search_box.text()}
         response = requests.get(links["search"], params=params)
         print("searching {}".format(self.search_box.text()))
@@ -48,13 +50,36 @@ class Window(QMainWindow):
         #print(self.searched_dict)
         for titles in self.searched_dict:
             self.list_widget.addItem(titles)
+
+
+    def selection_changed(self, item):
+        manga_name = item.text()
+        #print("Selected item id: ", self.searched_dict[item.text()]["id"])
+        if not manga_name in self.clicked_dict.keys():
+            self.clicked_dict[manga_name] = {}
+            self.searched_chaps[manga_name] = {}
+            self.searched_chaps[manga_name]["chapters"] = {}
             
+            url = links["manga_feed"].format(self.searched_dict[item.text()]["id"])
+            params = {"limit":500, "order[chapter]" : "asc"}
+            response = requests.get(url, params=params)
+            result = response.json()['results']
+            print(self.searched_chaps)
+            #for x in range(len(result)):
+               # self.searched_chaps[manga_name]
+            
+
+            
+            
+        else:
+            print("{} is already in the clicked titles\nClicked titles: {}".format(manga_name, self.clicked_dict))
+          
 
 
     # method for components
     def UiComponents(self):
   
-        # creating a Widgets
+        # creating widgets
         self.list_widget = QListWidget(self)
         self.search_box = QLineEdit(self)
         search_button = QPushButton("bruh", self)
@@ -65,8 +90,9 @@ class Window(QMainWindow):
         self.list_widget.setGeometry(0, self.search_box.geometry().x() + self.search_box.geometry().height() + 20, 150, 200)
         
 
-        #setting up buttons' functions
+        #setting up widgets' functions
         search_button.clicked.connect(self.clicked_search)
+        self.list_widget.itemClicked.connect(self.selection_changed)
 
 
         # list widget items

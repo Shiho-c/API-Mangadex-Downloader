@@ -4,3 +4,4 @@ links = {
 }
 
 find_nani = ["status", "publicationDemographic"]
+chapter_nani = ["volume", "chapter", "title"]

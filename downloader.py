@@ -4,7 +4,7 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtGui import * 
 from PyQt5.QtCore import * 
 from functools import partial
-from api_details import links, find_nani, chapter_nani
+from api_details import links, find_nani
 
 import sys
 import requests
@@ -28,6 +28,7 @@ class Window(QMainWindow):
         self.tmp_data_dict = {}
         self.searched_chaps = {}
         self.searched_chaps_ids = {}
+        self.searched_chaps_hashes = {}
         self.selected_title = ""
         self.selected_chapter = ""
 
@@ -52,8 +53,19 @@ class Window(QMainWindow):
             self.title_listbox.addItem(titles)
 
     def chapter_box_box_selectionChanged(self, item):
+        self.selected_chapter = item.text()
+
+
         print("Selected Title: ", self.selected_title)
         print("Selected Chapter: {}".format(item.text()))
+
+        image_list = self.searched_chaps[self.selected_title]["chapters"][self.selected_chapter]
+        print(image_list)
+        manga_id = self.searched_chaps_ids[self.selected_title][self.selected_chapter]
+        manga_hash = self.searched_chaps_hashes[self.selected_title][self.selected_chapter]
+        print(manga_hash)
+        response = requests.get(links["get_baseurl"].format(manga_id))
+        #print(response.json())
         
 
 
@@ -63,25 +75,24 @@ class Window(QMainWindow):
         self.selected_title = manga_name
         #print("Selected item id: ", self.searched_dict[item.text()]["id"])
         if not manga_name in self.clicked_dict.keys():
-            self.clicked_dict[manga_name] = {}
-            self.searched_chaps[manga_name] = {}
-            self.searched_chaps[manga_name]["chapters"] = {}
-            
+            self.clicked_dict[manga_name], self.searched_chaps[manga_name],self.searched_chaps[manga_name]["chapters"]  = {}, {}, {}
+            self.searched_chaps_ids[manga_name], self.searched_chaps_hashes[manga_name] = {}, {}
+
             url = links["manga_feed"].format(self.searched_dict[item.text()]["id"])
             params = {"limit":100, "order[chapter]" : "asc", "locales[]" : "en"}
             response = requests.get(url, params=params)
             result = response.json()['results']
             tmp_list = []
-            self.searched_chaps_ids[manga_name] = {}
+            
             self.chapter_listbox.clear()
             for x in range(len(result)):
                 self.searched_chaps[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['data']
-                
                 self.searched_chaps_ids[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['id']
+                self.searched_chaps_hashes[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['hash']
                 self.chapter_listbox.addItem("Chapter " + str(result[x]['data']['attributes']['chapter']))
                 
                 #self.searched_chaps[manga_name]["chapters"]['title'] = result[x]['data']['attributes']['title']
-            print(self.searched_chaps_ids)     
+            #print(self.searched_chaps[manga_name])     
         else:
             self.chapter_listbox.clear()
             for chapters in self.searched_chaps[manga_name]["chapters"]:

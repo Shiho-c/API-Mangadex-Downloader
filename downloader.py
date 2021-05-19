@@ -31,6 +31,7 @@ class Window(QMainWindow):
         self.clicked_dict = {}
         self.tmp_data_dict = {}
         self.searched_chaps = {}
+        self.searched_chaps_ids = {}
 
 
         # showing all the widgets
@@ -68,10 +69,11 @@ class Window(QMainWindow):
             tmp_list = []
             self.chapter_listbox.clear()
             for x in range(len(result)):
-               self.searched_chaps[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['data']
-               self.chapter_listbox.addItem("Chapter " + str(result[x]['data']['attributes']['chapter']))
-               #self.searched_chaps[manga_name]["chapters"]['title'] = result[x]['data']['attributes']['title']
-                
+                self.searched_chaps[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['data']
+                #self.searched_chaps_ids[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['id']
+                self.chapter_listbox.addItem("Chapter " + str(result[x]['data']['attributes']['chapter']))
+                #self.searched_chaps[manga_name]["chapters"]['title'] = result[x]['data']['attributes']['title']
+            print(self.searched_chaps_ids)     
         else:
             self.chapter_listbox.clear()
             for chapters in self.searched_chaps[manga_name]["chapters"]:

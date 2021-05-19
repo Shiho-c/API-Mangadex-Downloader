@@ -60,12 +60,12 @@ class Window(QMainWindow):
         print("Selected Chapter: {}".format(item.text()))
 
         image_list = self.searched_chaps[self.selected_title]["chapters"][self.selected_chapter]
-        print(image_list)
         manga_id = self.searched_chaps_ids[self.selected_title][self.selected_chapter]
         manga_hash = self.searched_chaps_hashes[self.selected_title][self.selected_chapter]
-        print(manga_hash)
         response = requests.get(links["get_baseurl"].format(manga_id))
-        #print(response.json())
+        base_url = response.json()["baseUrl"]
+        #still have to iterate the image list and shits
+        full_image_url = "{}/data/{}/{}".format(base_url, manga_hash, image_list[5])
         
 
 

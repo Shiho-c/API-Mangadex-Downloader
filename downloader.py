@@ -1,5 +1,4 @@
 
-# importing libraries
 from PyQt5.QtWidgets import * 
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtGui import * 
@@ -17,13 +16,10 @@ class Window(QMainWindow):
     def __init__(self):
         super().__init__()
   
-        # setting title
         self.setWindowTitle("Python ")
-  
-        # setting geometry
-        self.setGeometry(100, 100, 500, 400)
-
-        # calling method
+        window_width, window_height = 900, 500
+        window_startingpoint = 0
+        self.setGeometry(window_startingpoint, window_startingpoint, window_width, window_height)
         self.UiComponents()
   
         #no idea where to put variables
@@ -32,9 +28,12 @@ class Window(QMainWindow):
         self.tmp_data_dict = {}
         self.searched_chaps = {}
         self.searched_chaps_ids = {}
+        self.selected_title = ""
+        self.selected_chapter = ""
 
 
         # showing all the widgets
+        self.center()
         self.show()
         
     def clicked_search(self):
@@ -52,12 +51,18 @@ class Window(QMainWindow):
         for titles in self.searched_dict:
             self.title_listbox.addItem(titles)
 
+    def chapter_box_box_selectionChanged(self, item):
+        print("Selected Title: ", self.selected_title)
+        print("Selected Chapter: {}".format(item.text()))
+        
 
-    def selection_changed(self, item):
+
+
+    def title_box_selectionChanged(self, item):
         manga_name = item.text()
+        self.selected_title = manga_name
         #print("Selected item id: ", self.searched_dict[item.text()]["id"])
         if not manga_name in self.clicked_dict.keys():
-            print("Triggering")
             self.clicked_dict[manga_name] = {}
             self.searched_chaps[manga_name] = {}
             self.searched_chaps[manga_name]["chapters"] = {}
@@ -67,11 +72,14 @@ class Window(QMainWindow):
             response = requests.get(url, params=params)
             result = response.json()['results']
             tmp_list = []
+            self.searched_chaps_ids[manga_name] = {}
             self.chapter_listbox.clear()
             for x in range(len(result)):
                 self.searched_chaps[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['data']
-                #self.searched_chaps_ids[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['id']
+                
+                self.searched_chaps_ids[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['id']
                 self.chapter_listbox.addItem("Chapter " + str(result[x]['data']['attributes']['chapter']))
+                
                 #self.searched_chaps[manga_name]["chapters"]['title'] = result[x]['data']['attributes']['title']
             print(self.searched_chaps_ids)     
         else:
@@ -84,12 +92,14 @@ class Window(QMainWindow):
 
     # method for components
     def UiComponents(self):
-  
+
         # creating widgets
         self.title_listbox = QListWidget(self)
         self.chapter_listbox = QListWidget(self)
         self.search_box = QLineEdit(self)
         search_button = QPushButton("bruh", self)
+        #widget_list = [self.title_listbox, self.chapter_listbox,self.search_box, search_button]
+
 
         # setting widgets coordinates
         self.search_box.setGeometry(0, 0, 100, 20)
@@ -100,20 +110,10 @@ class Window(QMainWindow):
 
         #setting up widgets' functions
         search_button.clicked.connect(self.clicked_search)
-        self.title_listbox.itemClicked.connect(self.selection_changed)
-        self.chapter_listbox.itemClicked.connect(self.selection_changed)
+        self.title_listbox.itemClicked.connect(self.title_box_selectionChanged)
+        self.chapter_listbox.itemClicked.connect(self.chapter_box_box_selectionChanged)
 
 
-        # list widget items
-        '''random = "https://api.mangadex.org/manga/random"
-        for x in range(20):
-            response = requests.get(random)        
-            object = QListWidgetItem(str(response.json()['data']['attributes']['title']))
-  
-            title_listbox.addItem(object)'''
-
-
-  
         # scroll bar
         titles_scrollbar = QScrollBar(self)
         chapters_scrollbar = QScrollBar(self)
@@ -130,9 +130,16 @@ class Window(QMainWindow):
         # getting vertical scroll bar
         value = self.title_listbox.verticalScrollBar()
         value2 = self.chapter_listbox.verticalScrollBar()
-  
-  
-  
+
+
+
+    def center(self):
+        frameGm = self.frameGeometry()
+        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
+        centerPoint = QApplication.desktop().screenGeometry(screen).center()
+        frameGm.moveCenter(centerPoint)
+        self.move(frameGm.topLeft())
+    
   
 # create pyqt5 app
 App = QApplication(sys.argv)

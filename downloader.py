@@ -66,15 +66,16 @@ class Window(QMainWindow):
             response = requests.get(url, params=params)
             result = response.json()['results']
             tmp_list = []
+            self.chapter_listbox.clear()
             for x in range(len(result)):
                self.searched_chaps[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['data']
                self.chapter_listbox.addItem("Chapter " + str(result[x]['data']['attributes']['chapter']))
                #self.searched_chaps[manga_name]["chapters"]['title'] = result[x]['data']['attributes']['title']
                 
-            print(tmp_list)
-            print(self.searched_chaps)
-
         else:
+            self.chapter_listbox.clear()
+            for chapters in self.searched_chaps[manga_name]["chapters"]:
+                self.chapter_listbox.addItem(chapters)
             print("{} is already in the clicked titles\nClicked titles: {}".format(manga_name, self.clicked_dict))
           
 

@@ -27,8 +27,7 @@ class Window(QMainWindow):
         self.clicked_dict = {}
         self.tmp_data_dict = {}
         self.searched_chaps = {}
-        self.searched_chaps_ids = {}
-        self.searched_chaps_hashes = {}
+        self.searched_chaps_info = {}
         self.selected_title = ""
         self.selected_chapter = ""
 
@@ -60,11 +59,14 @@ class Window(QMainWindow):
         print("Selected Chapter: {}".format(item.text()))
 
         image_list = self.searched_chaps[self.selected_title]["chapters"][self.selected_chapter]
-        manga_id = self.searched_chaps_ids[self.selected_title][self.selected_chapter]
-        manga_hash = self.searched_chaps_hashes[self.selected_title][self.selected_chapter]
+        
+        manga_id = self.searched_chaps_info[self.selected_title][self.selected_chapter]["id"]
+        manga_hash = self.searched_chaps_info[self.selected_title][self.selected_chapter]["hash"]
         response = requests.get(links["get_baseurl"].format(manga_id))
         base_url = response.json()["baseUrl"]
         #still have to iterate the image list and shits
+        print("shit", self.searched_chaps_info[self.selected_title])
+        #print(manga_hash, manga_id)
         full_image_url = "{}/data/{}/{}".format(base_url, manga_hash, image_list[5])
         
 
@@ -76,7 +78,7 @@ class Window(QMainWindow):
         #print("Selected item id: ", self.searched_dict[item.text()]["id"])
         if not manga_name in self.clicked_dict.keys():
             self.clicked_dict[manga_name], self.searched_chaps[manga_name],self.searched_chaps[manga_name]["chapters"]  = {}, {}, {}
-            self.searched_chaps_ids[manga_name], self.searched_chaps_hashes[manga_name] = {}, {}
+            self.searched_chaps_info[manga_name] = {}
 
             url = links["manga_feed"].format(self.searched_dict[item.text()]["id"])
             params = {"limit":100, "order[chapter]" : "asc", "locales[]" : "en"}
@@ -87,12 +89,13 @@ class Window(QMainWindow):
             self.chapter_listbox.clear()
             for x in range(len(result)):
                 self.searched_chaps[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['data']
-                self.searched_chaps_ids[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['id']
-                self.searched_chaps_hashes[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['hash']
+                #create a new key called chapter then  store manga id and hash there 
+                self.searched_chaps_info[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = {}
+                self.searched_chaps_info[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])]["id"] = result[x]['data']['id']
+                self.searched_chaps_info[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])]["hash"] = result[x]['data']['attributes']['hash']
+
                 self.chapter_listbox.addItem("Chapter " + str(result[x]['data']['attributes']['chapter']))
                 
-                #self.searched_chaps[manga_name]["chapters"]['title'] = result[x]['data']['attributes']['title']
-            #print(self.searched_chaps[manga_name])     
         else:
             self.chapter_listbox.clear()
             for chapters in self.searched_chaps[manga_name]["chapters"]:
@@ -101,7 +104,6 @@ class Window(QMainWindow):
           
 
 
-    # method for components
     def UiComponents(self):
 
         # creating widgets

@@ -1,4 +1,3 @@
-
 from PyQt5.QtWidgets import * 
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtGui import * 
@@ -6,10 +5,7 @@ from PyQt5.QtCore import *
 from functools import partial
 from api_details import links, find_nani
 
-import sys
-import requests
-import json
-import time
+import sys, requests, json, time
 
 class Window(QMainWindow):
   
@@ -30,12 +26,92 @@ class Window(QMainWindow):
         self.searched_chaps_info = {}
         self.selected_title = ""
         self.selected_chapter = ""
-
+        self.last_selected_title = ""
+        self.last_selected_chapter = ""
+        self.current_base_url = ""
 
         # showing all the widgets
         self.center()
         self.show()
         
+
+    def UiComponents(self):
+
+        # creating widgets
+        self.title_listbox = QListWidget(self)
+        self.chapter_listbox = QListWidget(self)
+        self.search_box = QLineEdit(self)
+        download_button = QPushButton("Download", self)
+        search_button = QPushButton("Search", self)
+        #widget_list = [self.title_listbox, self.chapter_listbox,self.search_box, search_button]
+
+
+        # setting widgets coordinates
+        self.search_box.setGeometry(0, 0, 100, 20)
+        
+        search_button.setGeometry(self.search_box.geometry().x() + self.search_box.geometry().width() + 20, 0, 100,20)
+        
+        download_button.setGeometry(search_button.geometry().x() + search_button.geometry().width() + 20, 0, 100,20)
+        
+        self.title_listbox.setGeometry(0, self.search_box.geometry().x() + self.search_box.geometry().height() + 20, 150, 200)
+        
+        self.chapter_listbox.setGeometry(self.title_listbox.geometry().x()+self.title_listbox.geometry().width() + 20, self.search_box.geometry().x() + self.search_box.geometry().height() + 20, 150, 200)
+        
+
+        #setting up widgets' functions
+        search_button.clicked.connect(self.clicked_search)
+        download_button.clicked.connect(self.clicked_download)
+        self.title_listbox.itemClicked.connect(self.title_box_selectionChanged)
+        self.chapter_listbox.itemClicked.connect(self.chapter_box_box_selectionChanged)
+
+
+        titles_scrollbar = QScrollBar(self)
+        chapters_scrollbar = QScrollBar(self)
+  
+        # setting style sheet to the scroll bar
+        titles_scrollbar.setStyleSheet("background : lightgreen;")
+        chapters_scrollbar.setStyleSheet("background : lightgreen;")
+  
+        # setting vertical scroll bar to it
+        self.title_listbox.setVerticalScrollBar(titles_scrollbar)
+        self.chapter_listbox.setVerticalScrollBar(chapters_scrollbar)
+  
+  
+        # getting vertical scroll bar
+        value = self.title_listbox.verticalScrollBar()
+        value2 = self.chapter_listbox.verticalScrollBar()
+
+
+
+    def center(self):
+        frameGm = self.frameGeometry()
+        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
+        centerPoint = QApplication.desktop().screenGeometry(screen).center()
+        frameGm.moveCenter(centerPoint)
+        self.move(frameGm.topLeft())
+
+
+    def clicked_download(self):
+
+        print("yikes")
+        image_list = self.searched_chaps[self.selected_title]["chapters"][self.selected_chapter]
+        for x in range(len(image_list)):
+            with open('page {}.png'.format(x), 'wb') as handle:
+                image_url = self.current_base_url + image_list[x]
+                print(image_url)
+                response = requests.get(image_url, stream=True)
+
+                if not response.ok:
+                    print (response)
+
+                for block in response.iter_content(1024):
+                    if not block:
+                        break
+
+                    handle.write(block)
+            
+
+
     def clicked_search(self):
         params = {"limit":100, "title":self.search_box.text()}
         response = requests.get(links["search"], params=params)
@@ -52,8 +128,11 @@ class Window(QMainWindow):
             self.title_listbox.addItem(titles)
 
     def chapter_box_box_selectionChanged(self, item):
+        if item.text() == self.last_selected_chapter:
+            #to stop the code from doing requests to the url since some people are autistic and triple clicks
+            return
         self.selected_chapter = item.text()
-
+        self.last_selected_chapter = item.text()
 
         print("Selected Title: ", self.selected_title)
         print("Selected Chapter: {}".format(item.text()))
@@ -65,16 +144,20 @@ class Window(QMainWindow):
         response = requests.get(links["get_baseurl"].format(manga_id))
         base_url = response.json()["baseUrl"]
         #still have to iterate the image list and shits
-        print("shit", self.searched_chaps_info[self.selected_title])
+        #print("shit", self.searched_chaps_info[self.selected_title])
         #print(manga_hash, manga_id)
-        full_image_url = "{}/data/{}/{}".format(base_url, manga_hash, image_list[5])
-        
+        self.current_base_url = "{}/data/{}/".format(base_url, manga_hash)
+        print(self.current_base_url)
 
 
 
     def title_box_selectionChanged(self, item):
+        if item.text() == self.last_selected_title:
+            #to stop the code from doing requests to the url since some people are autistic and triple clicks
+            return
         manga_name = item.text()
         self.selected_title = manga_name
+        self.last_selected_title = manga_name
         #print("Selected item id: ", self.searched_dict[item.text()]["id"])
         if not manga_name in self.clicked_dict.keys():
             self.clicked_dict[manga_name], self.searched_chaps[manga_name],self.searched_chaps[manga_name]["chapters"]  = {}, {}, {}
@@ -104,54 +187,7 @@ class Window(QMainWindow):
           
 
 
-    def UiComponents(self):
-
-        # creating widgets
-        self.title_listbox = QListWidget(self)
-        self.chapter_listbox = QListWidget(self)
-        self.search_box = QLineEdit(self)
-        search_button = QPushButton("bruh", self)
-        #widget_list = [self.title_listbox, self.chapter_listbox,self.search_box, search_button]
-
-
-        # setting widgets coordinates
-        self.search_box.setGeometry(0, 0, 100, 20)
-        search_button.setGeometry(self.search_box.geometry().x() + self.search_box.geometry().width() + 20, 0, 100,20)
-        self.title_listbox.setGeometry(0, self.search_box.geometry().x() + self.search_box.geometry().height() + 20, 150, 200)
-        self.chapter_listbox.setGeometry(self.title_listbox.geometry().x()+self.title_listbox.geometry().width() + 20, self.search_box.geometry().x() + self.search_box.geometry().height() + 20, 150, 200)
-        
-
-        #setting up widgets' functions
-        search_button.clicked.connect(self.clicked_search)
-        self.title_listbox.itemClicked.connect(self.title_box_selectionChanged)
-        self.chapter_listbox.itemClicked.connect(self.chapter_box_box_selectionChanged)
-
-
-        # scroll bar
-        titles_scrollbar = QScrollBar(self)
-        chapters_scrollbar = QScrollBar(self)
-  
-        # setting style sheet to the scroll bar
-        titles_scrollbar.setStyleSheet("background : lightgreen;")
-        chapters_scrollbar.setStyleSheet("background : lightgreen;")
-  
-        # setting vertical scroll bar to it
-        self.title_listbox.setVerticalScrollBar(titles_scrollbar)
-        self.chapter_listbox.setVerticalScrollBar(chapters_scrollbar)
-  
-  
-        # getting vertical scroll bar
-        value = self.title_listbox.verticalScrollBar()
-        value2 = self.chapter_listbox.verticalScrollBar()
-
-
-
-    def center(self):
-        frameGm = self.frameGeometry()
-        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
-        centerPoint = QApplication.desktop().screenGeometry(screen).center()
-        frameGm.moveCenter(centerPoint)
-        self.move(frameGm.topLeft())
+    
     
   
 # create pyqt5 app

@@ -63,7 +63,7 @@ class Window(QMainWindow):
         self.set_button_flat(download_button, True, "components/download.png")
         #widget_list = [self.title_listbox, self.chapter_listbox,self.search_box, search_button]
 
-        #gotta do something about this shittyass long part soon
+        #gotta do something about this shitty longass part but maybe next time
         self.search_box.setGeometry(10, 21, 113, 20)
         self.current_status.setGeometry(10, 1, 161, 16)
         self.title_listbox.setGeometry(10, 75, 231, 371)
@@ -118,7 +118,7 @@ class Window(QMainWindow):
                     response = requests.get(image_url, stream=True)
 
                     if not response.ok:
-                        print (response.status_code)
+                        print (response.text)
                         #break
 
                     for block in response.iter_content(1024):
@@ -130,16 +130,8 @@ class Window(QMainWindow):
 
         image_list = self.searched_chaps[self.selected_title]["chapters"][self.selected_chapter]
         
-       # pool = Pool()
-        #pool.map(self.download_image, image_list)
-        #self.download_image(image_list)
-        #download_image(image_list)
-        #pool = multiprocessing.Pool()
-        #pool.map(self.download_image, image_list)
         t = Thread(target=self.download_image, args = (image_list, self.last_selected_title, self.current_base_url, ))
-        #t.setDaemon(True)
         t.start()
-        #t.join()
             
 
 
@@ -150,17 +142,8 @@ class Window(QMainWindow):
         params = {"limit":100, "title":manga_title}
         response = requests.get(links["search"], params=params)
         results = response.json()["results"]
-        for x in range(len(results)):
-            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]] = {}
-            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["id"] = results[x]["data"]["id"]
-            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["description"] = results[x]["data"]["attributes"]["description"]["en"]
-            for b in find_nani:
-                self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]][b] = results[x]["data"]["attributes"][b]
-        #print(self.searched_dict)
-        for titles in self.searched_dict:
-            self.title_listbox.addItem(titles)
-            print(titles)
-        self.current_status.setText("Status: ")
+        self.fetch_titles(results)
+
 
     def chapter_box_box_selectionChanged(self, item):
         if item.text() == self.last_selected_chapter:
@@ -169,8 +152,6 @@ class Window(QMainWindow):
         self.selected_chapter = item.text()
         self.last_selected_chapter = item.text()
 
-        print("Selected Title: ", self.selected_title)
-        print("Selected Chapter: {}".format(item.text()))
 
         image_list = self.searched_chaps[self.selected_title]["chapters"][self.selected_chapter]
         
@@ -178,9 +159,6 @@ class Window(QMainWindow):
         manga_hash = self.searched_chaps_info[self.selected_title][self.selected_chapter]["hash"]
         response = requests.get(links["get_baseurl"].format(manga_id))
         base_url = response.json()["baseUrl"]
-        #still have to iterate the image list and shits
-        #print("shit", self.searched_chaps_info[self.selected_title])
-        #print(manga_hash, manga_id)
         self.current_base_url = "{}/data/{}/".format(base_url, manga_hash)
         print(self.current_base_url)
 
@@ -193,18 +171,30 @@ class Window(QMainWindow):
         manga_name = item.text()
         self.selected_title = manga_name
         self.last_selected_title = manga_name
-        #print("Selected item id: ", self.searched_dict[item.text()]["id"])
         if not manga_name in self.clicked_dict.keys():
             self.clicked_dict[manga_name], self.searched_chaps[manga_name],self.searched_chaps[manga_name]["chapters"]  = {}, {}, {}
             self.searched_chaps_info[manga_name] = {}
+            self.chapter_listbox.clear()
+            t = Thread(target=self.fetch_chapters, args = (manga_name,))
+            t.start()
 
-            url = links["manga_feed"].format(self.searched_dict[item.text()]["id"])
-            params = {"limit":100, "order[chapter]" : "asc", "translatedLanguage[]" : "en"}
+                
+        else:
+            self.chapter_listbox.clear()
+            for chapters in self.searched_chaps[manga_name]["chapters"]:
+                self.chapter_listbox.addItem(chapters)
+            #print("{} is already in the clicked titles\nClicked titles: {}".format(manga_name, self.clicked_dict))
+          
+
+    def fetch_chapters(self, manga_name):
+        url = links["manga_feed"].format(self.searched_dict[manga_name]["id"])
+        offset = 0
+        params = {"limit":500, "order[chapter]" : "asc", "translatedLanguage[]" : "en", "offset": offset}
+        max_result = 500
+        while max_result == 500:
+            params["offset"] = offset
             response = requests.get(url, params=params)
             result = response.json()['results']
-            tmp_list = []
-            
-            self.chapter_listbox.clear()
             for x in range(len(result)):
                 self.searched_chaps[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['data']
                 #create a new key called chapter then  store manga id and hash there 
@@ -213,16 +203,19 @@ class Window(QMainWindow):
                 self.searched_chaps_info[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])]["hash"] = result[x]['data']['attributes']['hash']
 
                 self.chapter_listbox.addItem("Chapter " + str(result[x]['data']['attributes']['chapter']))
-                
-        else:
-            self.chapter_listbox.clear()
-            for chapters in self.searched_chaps[manga_name]["chapters"]:
-                self.chapter_listbox.addItem(chapters)
-            print("{} is already in the clicked titles\nClicked titles: {}".format(manga_name, self.clicked_dict))
-          
+            max_result = len(result)
+            offset+=500
 
-
-    
+    def fetch_titles(self, results):
+        for x in range(len(results)):
+            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]] = {}
+            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["id"] = results[x]["data"]["id"]
+            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["description"] = results[x]["data"]["attributes"]["description"]["en"]
+            for b in find_nani:
+                self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]][b] = results[x]["data"]["attributes"][b]
+        for titles in self.searched_dict:
+            self.title_listbox.addItem(titles)
+            print(titles)
     
   
 # create pyqt5 app

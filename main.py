@@ -5,7 +5,12 @@ from PyQt5.QtCore import *
 from functools import partial
 from api_details import links, find_nani
 
-import sys, requests, json, time
+import sys
+import requests
+import json
+import time
+import os
+from threading import Thread
 
 class Window(QMainWindow):
   
@@ -90,29 +95,45 @@ class Window(QMainWindow):
         frameGm.moveCenter(centerPoint)
         self.move(frameGm.topLeft())
 
+    def download_image(self, image_list, manga_title, base_url):
+        print("Holy cow")
+        if not os.path.exists(manga_title):
+            os.makedirs(manga_title)
+        for x in range(len(image_list)):
+            with open('{}/page {}.png'.format(manga_title, x), 'wb+') as handle:
+                    image_url = base_url + image_list[x]
+                    print(image_url)
+                    response = requests.get(image_url, stream=True)
 
+                    if not response.ok:
+                        print (response.status_code)
+                        #break
+
+                    for block in response.iter_content(1024):
+                        if not block:
+                            break
+
+                        handle.write(block)
     def clicked_download(self):
 
-        print("yikes")
         image_list = self.searched_chaps[self.selected_title]["chapters"][self.selected_chapter]
-        for x in range(len(image_list)):
-            with open('page {}.png'.format(x), 'wb') as handle:
-                image_url = self.current_base_url + image_list[x]
-                print(image_url)
-                response = requests.get(image_url, stream=True)
-
-                if not response.ok:
-                    print (response)
-
-                for block in response.iter_content(1024):
-                    if not block:
-                        break
-
-                    handle.write(block)
+        
+       # pool = Pool()
+        #pool.map(self.download_image, image_list)
+        #self.download_image(image_list)
+        #download_image(image_list)
+        #pool = multiprocessing.Pool()
+        #pool.map(self.download_image, image_list)
+        t = Thread(target=self.download_image, args = (image_list, self.last_selected_title, self.current_base_url, ))
+        #t.setDaemon(True)
+        t.start()
+        #t.join()
             
 
 
     def clicked_search(self):
+        self.title_listbox.clear()
+        self.searched_dict.clear()
         params = {"limit":100, "title":self.search_box.text()}
         response = requests.get(links["search"], params=params)
         print("searching {}".format(self.search_box.text()))
@@ -126,6 +147,7 @@ class Window(QMainWindow):
         #print(self.searched_dict)
         for titles in self.searched_dict:
             self.title_listbox.addItem(titles)
+            print(titles)
 
     def chapter_box_box_selectionChanged(self, item):
         if item.text() == self.last_selected_chapter:
@@ -164,7 +186,7 @@ class Window(QMainWindow):
             self.searched_chaps_info[manga_name] = {}
 
             url = links["manga_feed"].format(self.searched_dict[item.text()]["id"])
-            params = {"limit":100, "order[chapter]" : "asc", "locales[]" : "en"}
+            params = {"limit":100, "order[chapter]" : "asc", "translatedLanguage[]" : "en"}
             response = requests.get(url, params=params)
             result = response.json()['results']
             tmp_list = []

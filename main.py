@@ -18,9 +18,10 @@ class Window(QMainWindow):
         super().__init__()
   
         self.setWindowTitle("Python ")
-        window_width, window_height = 900, 500
+        window_width, window_height = 794, 511
         window_startingpoint = 0
-        self.setGeometry(window_startingpoint, window_startingpoint, window_width, window_height)
+        self.setFixedSize(window_width, window_height)
+        #self.setGeometry(window_startingpoint, window_startingpoint, window_width, window_height)
         self.UiComponents()
   
         #no idea where to put variables
@@ -39,30 +40,41 @@ class Window(QMainWindow):
         self.center()
         self.show()
         
-
+    def set_button_flat(self, button, change_image, icon_dir=None):
+        button.setFlat(True)
+        button.setStyleSheet("QPushButton:pressed {background-color: transparent;}")
+        if change_image:
+            button.setIcon(QtGui.QIcon(icon_dir))
     def UiComponents(self):
 
         # creating widgets
         self.title_listbox = QListWidget(self)
         self.chapter_listbox = QListWidget(self)
         self.search_box = QLineEdit(self)
+        self.current_status = QLabel("Status: ",self )
+
+
         download_button = QPushButton("Download", self)
         search_button = QPushButton("Search", self)
+        manga_header = QLabel("Manga Titles: ",self)
+        chapter_header = QLabel("Chapters: ",self )
+        doujinshi_check = QCheckBox("Doujinshi", self)
+        self.set_button_flat(search_button, True, "components/search.png")
+        self.set_button_flat(download_button, True, "components/download.png")
         #widget_list = [self.title_listbox, self.chapter_listbox,self.search_box, search_button]
 
-
-        # setting widgets coordinates
-        self.search_box.setGeometry(0, 0, 100, 20)
-        
-        search_button.setGeometry(self.search_box.geometry().x() + self.search_box.geometry().width() + 20, 0, 100,20)
-        
-        download_button.setGeometry(search_button.geometry().x() + search_button.geometry().width() + 20, 0, 100,20)
-        
-        self.title_listbox.setGeometry(0, self.search_box.geometry().x() + self.search_box.geometry().height() + 20, 150, 200)
-        
-        self.chapter_listbox.setGeometry(self.title_listbox.geometry().x()+self.title_listbox.geometry().width() + 20, self.search_box.geometry().x() + self.search_box.geometry().height() + 20, 150, 200)
-        
-
+        #gotta do something about this shittyass long part soon
+        self.search_box.setGeometry(10, 21, 113, 20)
+        self.current_status.setGeometry(10, 1, 161, 16)
+        self.title_listbox.setGeometry(10, 75, 231, 371)
+        self.chapter_listbox.setGeometry(250, 75, 231, 371)
+        search_button.setGeometry(108, 18, 91, 31)
+        download_button.setGeometry(250, 23, 72, 23)
+        manga_header.setGeometry(10, 40, 141, 31)
+        chapter_header.setGeometry(250, 50, 151, 21)
+        doujinshi_check.setGeometry(10, 450, 151, 17)
+        manga_header.setFont(QFont("Yu Gothic UI Light", 16))
+        chapter_header.setFont(QFont("Yu Gothic UI Light", 16))
         #setting up widgets' functions
         search_button.clicked.connect(self.clicked_search)
         download_button.clicked.connect(self.clicked_download)
@@ -96,7 +108,7 @@ class Window(QMainWindow):
         self.move(frameGm.topLeft())
 
     def download_image(self, image_list, manga_title, base_url):
-        print("Holy cow")
+        print("Holy cow test")
         if not os.path.exists(manga_title):
             os.makedirs(manga_title)
         for x in range(len(image_list)):
@@ -132,11 +144,11 @@ class Window(QMainWindow):
 
 
     def clicked_search(self):
+        manga_title = self.search_box.text()
         self.title_listbox.clear()
         self.searched_dict.clear()
-        params = {"limit":100, "title":self.search_box.text()}
+        params = {"limit":100, "title":manga_title}
         response = requests.get(links["search"], params=params)
-        print("searching {}".format(self.search_box.text()))
         results = response.json()["results"]
         for x in range(len(results)):
             self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]] = {}
@@ -148,6 +160,7 @@ class Window(QMainWindow):
         for titles in self.searched_dict:
             self.title_listbox.addItem(titles)
             print(titles)
+        self.current_status.setText("Status: ")
 
     def chapter_box_box_selectionChanged(self, item):
         if item.text() == self.last_selected_chapter:

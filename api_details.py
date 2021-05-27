@@ -5,3 +5,5 @@ links = {
 }
 
 find_nani = ["status", "publicationDemographic"]
+
+tags = {"Doujinshi" : "b13b2a48-c720-44a9-9c77-39c9979373fb"}

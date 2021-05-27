@@ -3,7 +3,7 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtGui import * 
 from PyQt5.QtCore import * 
 from functools import partial
-from api_details import links, find_nani
+from api_details import links, find_nani, tags
 
 import sys
 import requests
@@ -35,7 +35,7 @@ class Window(QWidget):
         self.last_selected_title = ""
         self.last_selected_chapter = ""
         self.current_base_url = ""
-
+        self.hidden_title_rows = []
         # showing all the widgets
         self.center()
         self.show()
@@ -59,7 +59,7 @@ class Window(QWidget):
         search_button = QPushButton("Search", self)
         manga_header = QLabel("Manga Titles: ",self)
         chapter_header = QLabel("Chapters: ",self )
-        doujinshi_check = QCheckBox("Doujinshi", self)
+        self.doujin_checkbox = QCheckBox("Doujinshi", self)
 
         
         
@@ -85,7 +85,7 @@ class Window(QWidget):
         self.main_layout.addWidget(self.chapter_listbox, 3, 1)
 
         # add checkbox
-        self.main_layout.addWidget(doujinshi_check, 4, 0)
+        self.main_layout.addWidget(self.doujin_checkbox, 4, 0)
 
         """
         #gotta do something about this shitty longass part but maybe next time
@@ -101,13 +101,13 @@ class Window(QWidget):
         """
         manga_header.setFont(QFont("Yu Gothic UI Light", 16))
         chapter_header.setFont(QFont("Yu Gothic UI Light", 16))
-        #setting up widgets' functions
+        #setting up widgets' functions / signals
         search_button.clicked.connect(self.clicked_search)
         download_button.clicked.connect(self.clicked_download)
         self.title_listbox.itemClicked.connect(self.title_box_selectionChanged)
         self.chapter_listbox.itemClicked.connect(self.chapter_box_box_selectionChanged)
+        self.doujin_checkbox.stateChanged.connect(self.doujin_checkboxToggled)
         
-
         titles_scrollbar = QScrollBar(self)
         chapters_scrollbar = QScrollBar(self)
   
@@ -162,14 +162,32 @@ class Window(QWidget):
 
 
     def clicked_search(self):
-        manga_title = self.search_box.text()
+        print(self.hidden_title_rows)
+        self.hidden_title_rows.clear()
         self.title_listbox.clear()
         self.searched_dict.clear()
-        params = {"limit":100, "title":manga_title}
+        manga_title = self.search_box.text()
+        if self.doujin_checkbox.isChecked():
+            params = {"limit":100, "title":manga_title, "excludedTags[]" : tags["Doujinshi"]}
+        else:
+            params = {"limit":100, "title":manga_title}
         response = requests.get(links["search"], params=params)
         results = response.json()["results"]
         self.fetch_titles(results)
 
+
+    def doujin_checkboxToggled(self):
+        if self.doujin_checkbox.isChecked() == True:
+            for x in range(self.title_listbox.count()):
+                title = self.title_listbox.item(x).text()
+                if self.searched_dict[title]["Doujinshi"] == "True":
+                    self.title_listbox.setRowHidden(x, True)
+                    self.hidden_title_rows.append(x)
+        else:
+            for x in self.hidden_title_rows:
+                self.title_listbox.setRowHidden(x, False)
+                    
+    
 
     def chapter_box_box_selectionChanged(self, item):
         if item.text() == self.last_selected_chapter:
@@ -236,13 +254,18 @@ class Window(QWidget):
     def fetch_titles(self, results):
         for x in range(len(results)):
             self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]] = {}
+            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["Doujinshi"] = "False"
             self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["id"] = results[x]["data"]["id"]
             self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["description"] = results[x]["data"]["attributes"]["description"]["en"]
+            
+            for y in results[x]["data"]["attributes"]["tags"]:
+                if tags["Doujinshi"] == y["id"]:
+                    self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["Doujinshi"] = "True"
+                    break
             for b in find_nani:
                 self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]][b] = results[x]["data"]["attributes"][b]
         for titles in self.searched_dict:
             self.title_listbox.addItem(titles)
-            print(titles)
     
   
 # create pyqt5 app

@@ -11,10 +11,10 @@ import json
 import time
 import os
 from threading import Thread
-
-class Window(QMainWindow):
+os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
+class Window(QWidget):
   
-    def __init__(self):
+    def __init__(self,):
         super().__init__()
   
         self.setWindowTitle("Python ")
@@ -52,17 +52,42 @@ class Window(QMainWindow):
         self.chapter_listbox = QListWidget(self)
         self.search_box = QLineEdit(self)
         self.current_status = QLabel("Status: ",self )
+        self.main_layout = QGridLayout(self)
 
-
+        
         download_button = QPushButton("Download", self)
         search_button = QPushButton("Search", self)
         manga_header = QLabel("Manga Titles: ",self)
         chapter_header = QLabel("Chapters: ",self )
         doujinshi_check = QCheckBox("Doujinshi", self)
+
+        
+        
         self.set_button_flat(search_button, True, "components/search.png")
         self.set_button_flat(download_button, True, "components/download.png")
         #widget_list = [self.title_listbox, self.chapter_listbox,self.search_box, search_button]
 
+
+
+        self.main_layout.addWidget(self.current_status,0, 0)
+        # second row. We use a QHBoxlayout to layout the QLineEdit and the two buttons
+        hlayout = QHBoxLayout(self)
+        hlayout.setContentsMargins(0,0,0,0)
+        hlayout.addWidget(self.search_box)
+        hlayout.addWidget(search_button)
+        hlayout.addWidget(download_button)
+        # add QHLayout to second row in grid layout
+        self.main_layout.addLayout(hlayout, 1, 0, 1, 2)
+
+        self.main_layout.addWidget(manga_header, 2, 0)
+        self.main_layout.addWidget(chapter_header, 2, 1)
+        self.main_layout.addWidget(self.title_listbox, 3, 0)
+        self.main_layout.addWidget(self.chapter_listbox, 3, 1)
+
+        # add checkbox
+        self.main_layout.addWidget(doujinshi_check, 4, 0)
+
+        """
         #gotta do something about this shitty longass part but maybe next time
         self.search_box.setGeometry(10, 21, 113, 20)
         self.current_status.setGeometry(10, 1, 161, 16)
@@ -73,6 +98,7 @@ class Window(QMainWindow):
         manga_header.setGeometry(10, 40, 141, 31)
         chapter_header.setGeometry(250, 50, 151, 21)
         doujinshi_check.setGeometry(10, 450, 151, 17)
+        """
         manga_header.setFont(QFont("Yu Gothic UI Light", 16))
         chapter_header.setFont(QFont("Yu Gothic UI Light", 16))
         #setting up widgets' functions
@@ -80,7 +106,7 @@ class Window(QMainWindow):
         download_button.clicked.connect(self.clicked_download)
         self.title_listbox.itemClicked.connect(self.title_box_selectionChanged)
         self.chapter_listbox.itemClicked.connect(self.chapter_box_box_selectionChanged)
-
+        
 
         titles_scrollbar = QScrollBar(self)
         chapters_scrollbar = QScrollBar(self)
@@ -189,6 +215,7 @@ class Window(QMainWindow):
     def fetch_chapters(self, manga_name):
         url = links["manga_feed"].format(self.searched_dict[manga_name]["id"])
         offset = 0
+        
         params = {"limit":500, "order[chapter]" : "asc", "translatedLanguage[]" : "en", "offset": offset}
         max_result = 500
         while max_result == 500:

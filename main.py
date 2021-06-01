@@ -11,7 +11,46 @@ import json
 import time
 import os
 from threading import Thread
-os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
+import queue
+class Manga():
+
+
+    def __init__(self, images, title, chapter, base_url):
+        super().__init__()
+        self.images = images
+        self.title = title
+        self.base_url = base_url
+        self.current_chapter = chapter
+
+
+    def thread_download(self):
+        t = Thread(target=self.download_image)
+        t.start()
+
+
+    def download_image(self):
+        if not os.path.exists(self.title):
+            os.makedirs(self.title)
+        if not os.path.exists(self.current_chapter):
+            current_chapdir = os.path.join(os.getcwd(), self.title, self.current_chapter)
+            os.makedirs(current_chapdir)
+            for x in range(len(self.images)):
+                with open('{}/page {}.{}'.format(current_chapdir, x, self.images[x][-3:]), 'wb+') as handle:
+                        image_url = self.base_url + self.images[x]
+                        print("Downloading test")
+
+                        response = requests.get(image_url, stream=True)
+
+                        if not response.ok:
+                            print (response.text)
+                            #break
+
+                        for block in response.iter_content(1024):
+                            if not block:
+                                break
+
+                            handle.write(block)
+        
 class Window(QWidget):
   
     def __init__(self,):
@@ -50,6 +89,7 @@ class Window(QWidget):
         # creating widgets
         self.title_listbox = QListWidget(self)
         self.chapter_listbox = QListWidget(self)
+        self.chapter_listbox.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.search_box = QLineEdit(self)
         self.current_status = QLabel("Status: ",self )
         self.main_layout = QGridLayout(self)
@@ -87,18 +127,6 @@ class Window(QWidget):
         # add checkbox
         self.main_layout.addWidget(self.doujin_checkbox, 4, 0)
 
-        """
-        #gotta do something about this shitty longass part but maybe next time
-        self.search_box.setGeometry(10, 21, 113, 20)
-        self.current_status.setGeometry(10, 1, 161, 16)
-        self.title_listbox.setGeometry(10, 75, 231, 371)
-        self.chapter_listbox.setGeometry(250, 75, 231, 371)
-        search_button.setGeometry(108, 18, 91, 31)
-        download_button.setGeometry(250, 23, 72, 23)
-        manga_header.setGeometry(10, 40, 141, 31)
-        chapter_header.setGeometry(250, 50, 151, 21)
-        doujinshi_check.setGeometry(10, 450, 151, 17)
-        """
         manga_header.setFont(QFont("Yu Gothic UI Light", 16))
         chapter_header.setFont(QFont("Yu Gothic UI Light", 16))
         #setting up widgets' functions / signals
@@ -132,13 +160,13 @@ class Window(QWidget):
         centerPoint = QApplication.desktop().screenGeometry(screen).center()
         frameGm.moveCenter(centerPoint)
         self.move(frameGm.topLeft())
-
+        
     def download_image(self, image_list, manga_title, base_url):
         print("Holy cow test")
         if not os.path.exists(manga_title):
             os.makedirs(manga_title)
         for x in range(len(image_list)):
-            with open('{}/page {}.png'.format(manga_title, x), 'wb+') as handle:
+            with open('{}/page {}.{}'.format(manga_title, x, image_list[x][-3:]), 'wb+') as handle:
                     image_url = base_url + image_list[x]
                     print(image_url)
                     response = requests.get(image_url, stream=True)
@@ -152,12 +180,13 @@ class Window(QWidget):
                             break
 
                         handle.write(block)
+    
     def clicked_download(self):
 
         image_list = self.searched_chaps[self.selected_title]["chapters"][self.selected_chapter]
-        
-        t = Thread(target=self.download_image, args = (image_list, self.last_selected_title, self.current_base_url, ))
-        t.start()
+        m = Manga(image_list, self.last_selected_title, self.last_selected_chapter, self.current_base_url)
+        #m.download_image()
+        m.thread_download()
             
 
 

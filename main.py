@@ -161,25 +161,6 @@ class Window(QWidget):
         frameGm.moveCenter(centerPoint)
         self.move(frameGm.topLeft())
         
-    def download_image(self, image_list, manga_title, base_url):
-        print("Holy cow test")
-        if not os.path.exists(manga_title):
-            os.makedirs(manga_title)
-        for x in range(len(image_list)):
-            with open('{}/page {}.{}'.format(manga_title, x, image_list[x][-3:]), 'wb+') as handle:
-                    image_url = base_url + image_list[x]
-                    print(image_url)
-                    response = requests.get(image_url, stream=True)
-
-                    if not response.ok:
-                        print (response.text)
-                        #break
-
-                    for block in response.iter_content(1024):
-                        if not block:
-                            break
-
-                        handle.write(block)
     
     def clicked_download(self):
 

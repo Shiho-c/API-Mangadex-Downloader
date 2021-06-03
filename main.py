@@ -4,15 +4,12 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import * 
 from functools import partial
 from api_details import links, find_nani, tags
-
+from api_functions import fetch_base_url, fetch_titles, fetch_chaps
 import sys
 import requests
-import json
 import time
 import os, errno
 from threading import Thread
-import queue
-from multiprocessing import Process, Queue
 class Manga():
 
 
@@ -181,16 +178,13 @@ class Window(QWidget):
     def clicked_download(self):
         
         for s_chapter in self.chapter_listbox.selectedItems():
-            image_list = self.searched_chaps[self.last_selected_title]["chapters"][s_chapter.text()]
-            m = Manga(image_list, self.last_selected_title, s_chapter.text(), self.current_base_url)
+            current_chapter = s_chapter.text()
+            base_url = fetch_base_url(self.searched_chaps_info, self.last_selected_title, current_chapter)
+
+
+            image_list = self.searched_chaps[self.last_selected_title]["chapters"][current_chapter]
+            m = Manga(image_list, self.last_selected_title, current_chapter, base_url)
             m.thread_download()
-        '''
-        #for single download
-        image_list = self.searched_chaps[self.last_selected_title]["chapters"][self.last_selected_chapter]
-        m = Manga(image_list, self.last_selected_title, self.last_selected_chapter, self.current_base_url)
-        #m.download_image()
-        m.thread_download()
-        print(self.last_selected_chapter)'''
             
 
 
@@ -206,7 +200,7 @@ class Window(QWidget):
             params = {"limit":100, "title":manga_title, "excludedTags[]" : tags["Doujinshi"]}
         response = requests.get(links["search"], params=params)
         results = response.json()["results"]
-        self.fetch_titles(results)
+        fetch_titles(results, self.searched_dict, self.title_listbox)
 
 
     def doujin_checkboxToggled(self):
@@ -229,7 +223,6 @@ class Window(QWidget):
         self.last_selected_chapter = item.text()
 
 
-        image_list = self.searched_chaps[self.last_selected_title]["chapters"][self.last_selected_chapter]
         
         manga_id = self.searched_chaps_info[self.last_selected_title][self.last_selected_chapter]["id"]
         manga_hash = self.searched_chaps_info[self.last_selected_title][self.last_selected_chapter]["hash"]
@@ -249,7 +242,7 @@ class Window(QWidget):
             self.clicked_dict[manga_name], self.searched_chaps[manga_name],self.searched_chaps[manga_name]["chapters"]  = {}, {}, {}
             self.searched_chaps_info[manga_name] = {}
             self.chapter_listbox.clear()
-            t = Thread(target=self.fetch_chapters, args = (manga_name,))
+            t = Thread(target=fetch_chaps, args = (manga_name, self.searched_dict, self.searched_chaps, self.searched_chaps_info, self.chapter_listbox))
             t.start()
 
                 
@@ -260,42 +253,8 @@ class Window(QWidget):
             #print("{} is already in the clicked titles\nClicked titles: {}".format(manga_name, self.clicked_dict))
           
 
-    def fetch_chapters(self, manga_name):
-        url = links["manga_feed"].format(self.searched_dict[manga_name]["id"])
-        offset = 0
-        
-        params = {"limit":500, "order[chapter]" : "asc", "translatedLanguage[]" : "en", "offset": offset}
-        max_result = 500
-        while max_result == 500:
-            params["offset"] = offset
-            response = requests.get(url, params=params)
-            result = response.json()['results']
-            for x in range(len(result)):
-                self.searched_chaps[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['data']
-                #create a new key called chapter then  store manga id and hash there 
-                self.searched_chaps_info[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = {}
-                self.searched_chaps_info[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])]["id"] = result[x]['data']['id']
-                self.searched_chaps_info[manga_name]["Chapter " + str(result[x]['data']['attributes']['chapter'])]["hash"] = result[x]['data']['attributes']['hash']
 
-                self.chapter_listbox.addItem("Chapter " + str(result[x]['data']['attributes']['chapter']))
-            max_result = len(result)
-            offset+=500
 
-    def fetch_titles(self, results):
-        for x in range(len(results)):
-            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]] = {}
-            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["Doujinshi"] = "False"
-            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["id"] = results[x]["data"]["id"]
-            self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["description"] = results[x]["data"]["attributes"]["description"]["en"]
-            
-            for y in results[x]["data"]["attributes"]["tags"]:
-                if tags["Doujinshi"] == y["id"]:
-                    self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]]["Doujinshi"] = "True"
-                    break
-            for b in find_nani:
-                self.searched_dict[results[x]["data"]["attributes"]["title"]["en"]][b] = results[x]["data"]["attributes"][b]
-        for titles in self.searched_dict:
-            self.title_listbox.addItem(titles)
     
   
 # create pyqt5 app

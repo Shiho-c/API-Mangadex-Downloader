@@ -9,9 +9,10 @@ import sys
 import requests
 import json
 import time
-import os
+import os, errno
 from threading import Thread
 import queue
+from multiprocessing import Process, Queue
 class Manga():
 
 
@@ -22,6 +23,10 @@ class Manga():
         self.base_url = base_url
         self.current_chapter = chapter
 
+    
+    def get_imageList():
+        pass
+
 
     def thread_download(self):
         t = Thread(target=self.download_image)
@@ -29,20 +34,33 @@ class Manga():
 
 
     def download_image(self):
-        if not os.path.exists(self.title):
+        #if not os.path.exists(self.title):
+            #os.makedirs(self.title)
+        try:
             os.makedirs(self.title)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
         if not os.path.exists(self.current_chapter):
             current_chapdir = os.path.join(os.getcwd(), self.title, self.current_chapter)
-            os.makedirs(current_chapdir)
+            try:
+                os.makedirs(current_chapdir)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
             for x in range(len(self.images)):
                 with open('{}/page {}.{}'.format(current_chapdir, x, self.images[x][-3:]), 'wb+') as handle:
                         image_url = self.base_url + self.images[x]
-                        print("Downloading test")
-
+                        #print(image_url)
                         response = requests.get(image_url, stream=True)
 
+
+                        #if response.ok:
+                            #print("No Error on {}".format(image_url))
                         if not response.ok:
-                            print (response.text)
+                            pass
+                            #print (response.text)
+                            #print("Error on {}".format(image_url))
                             #break
 
                         for block in response.iter_content(1024):
@@ -69,8 +87,6 @@ class Window(QWidget):
         self.tmp_data_dict = {}
         self.searched_chaps = {}
         self.searched_chaps_info = {}
-        self.selected_title = ""
-        self.selected_chapter = ""
         self.last_selected_title = ""
         self.last_selected_chapter = ""
         self.current_base_url = ""
@@ -100,7 +116,7 @@ class Window(QWidget):
         manga_header = QLabel("Manga Titles: ",self)
         chapter_header = QLabel("Chapters: ",self )
         self.doujin_checkbox = QCheckBox("Doujinshi", self)
-
+        self.chapter_numbers = QLineEdit("Input the chapters here ex: 20-50", self)
         
         
         self.set_button_flat(search_button, True, "components/search.png")
@@ -126,7 +142,7 @@ class Window(QWidget):
 
         # add checkbox
         self.main_layout.addWidget(self.doujin_checkbox, 4, 0)
-
+        self.main_layout.addWidget(self.chapter_numbers, 4, 1)
         manga_header.setFont(QFont("Yu Gothic UI Light", 16))
         chapter_header.setFont(QFont("Yu Gothic UI Light", 16))
         #setting up widgets' functions / signals
@@ -163,24 +179,31 @@ class Window(QWidget):
         
     
     def clicked_download(self):
-
-        image_list = self.searched_chaps[self.selected_title]["chapters"][self.selected_chapter]
+        
+        for s_chapter in self.chapter_listbox.selectedItems():
+            image_list = self.searched_chaps[self.last_selected_title]["chapters"][s_chapter.text()]
+            m = Manga(image_list, self.last_selected_title, s_chapter.text(), self.current_base_url)
+            m.thread_download()
+        '''
+        #for single download
+        image_list = self.searched_chaps[self.last_selected_title]["chapters"][self.last_selected_chapter]
         m = Manga(image_list, self.last_selected_title, self.last_selected_chapter, self.current_base_url)
         #m.download_image()
         m.thread_download()
+        print(self.last_selected_chapter)'''
             
 
 
     def clicked_search(self):
-        print(self.hidden_title_rows)
+        #print(self.hidden_title_rows)
         self.hidden_title_rows.clear()
         self.title_listbox.clear()
         self.searched_dict.clear()
         manga_title = self.search_box.text()
         if self.doujin_checkbox.isChecked():
-            params = {"limit":100, "title":manga_title, "excludedTags[]" : tags["Doujinshi"]}
-        else:
             params = {"limit":100, "title":manga_title}
+        else:
+            params = {"limit":100, "title":manga_title, "excludedTags[]" : tags["Doujinshi"]}
         response = requests.get(links["search"], params=params)
         results = response.json()["results"]
         self.fetch_titles(results)
@@ -203,18 +226,16 @@ class Window(QWidget):
         if item.text() == self.last_selected_chapter:
             #to stop the code from doing requests to the url since some people are autistic and triple clicks
             return
-        self.selected_chapter = item.text()
         self.last_selected_chapter = item.text()
 
 
-        image_list = self.searched_chaps[self.selected_title]["chapters"][self.selected_chapter]
+        image_list = self.searched_chaps[self.last_selected_title]["chapters"][self.last_selected_chapter]
         
-        manga_id = self.searched_chaps_info[self.selected_title][self.selected_chapter]["id"]
-        manga_hash = self.searched_chaps_info[self.selected_title][self.selected_chapter]["hash"]
+        manga_id = self.searched_chaps_info[self.last_selected_title][self.last_selected_chapter]["id"]
+        manga_hash = self.searched_chaps_info[self.last_selected_title][self.last_selected_chapter]["hash"]
         response = requests.get(links["get_baseurl"].format(manga_id))
         base_url = response.json()["baseUrl"]
         self.current_base_url = "{}/data/{}/".format(base_url, manga_hash)
-        print(self.current_base_url)
 
 
 
@@ -223,7 +244,6 @@ class Window(QWidget):
             #to stop the code from doing requests to the url since some people are autistic and triple clicks
             return
         manga_name = item.text()
-        self.selected_title = manga_name
         self.last_selected_title = manga_name
         if not manga_name in self.clicked_dict.keys():
             self.clicked_dict[manga_name], self.searched_chaps[manga_name],self.searched_chaps[manga_name]["chapters"]  = {}, {}, {}

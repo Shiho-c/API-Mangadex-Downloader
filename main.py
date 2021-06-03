@@ -5,7 +5,9 @@ from PyQt5.QtCore import *
 from functools import partial
 from api_details import links, find_nani, tags
 from api_functions import fetch_base_url, fetch_titles, fetch_chaps
+from PIL import Image
 import sys
+import re
 import requests
 import time
 import os, errno
@@ -19,10 +21,6 @@ class Manga():
         self.title = title
         self.base_url = base_url
         self.current_chapter = chapter
-
-    
-    def get_imageList():
-        pass
 
 
     def thread_download(self):
@@ -46,7 +44,7 @@ class Manga():
                 if e.errno != errno.EEXIST:
                     raise
             for x in range(len(self.images)):
-                with open('{}/page {}.{}'.format(current_chapdir, x, self.images[x][-3:]), 'wb+') as handle:
+                with open('{}/{}.{}'.format(current_chapdir, x, self.images[x][-3:]), 'wb+') as handle:
                         image_url = self.base_url + self.images[x]
                         #print(image_url)
                         response = requests.get(image_url, stream=True)
@@ -65,6 +63,22 @@ class Manga():
                                 break
 
                             handle.write(block)
+
+            print("Converting {} to pdf file".format(self.current_chapter))
+            img_name_list = os.listdir(current_chapdir)
+            img_name_list.sort(key=lambda f: int(re.sub('\D', '', f)))
+            img_list = []
+            im1 = Image.open(current_chapdir + "/" + img_name_list[0])
+            os.remove(current_chapdir + "/" + img_name_list[0] )
+            del img_name_list[0]
+            for x in img_name_list:
+                im2 = Image.open(current_chapdir + "/" + x)
+                object = im2.convert('RGB')
+                img_list.append(object)
+                os.remove(current_chapdir + "/" + x)
+            im1.save(current_chapdir + "/" + self.current_chapter + ".pdf", "PDF" ,resolution=100.0, save_all=True, append_images=img_list)
+            print("{} has been converted to pdf file".format(self.current_chapter))
+
         
 class Window(QWidget):
   

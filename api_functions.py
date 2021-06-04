@@ -23,8 +23,10 @@ def fetch_titles(results, searched_dict, listbox):
                 break
         for b in find_nani:
             searched_dict[results[x]["data"]["attributes"]["title"]["en"]][b] = results[x]["data"]["attributes"][b]
-    for titles in searched_dict:
-        listbox.addItem(titles)
+    titles = []
+    for t in searched_dict:
+        titles.append(t)
+    return titles
 
 def fetch_chaps(manga_name, searched_dict, searched_chaps, searched_chaps_info, listbox):
     url = links["manga_feed"].format(searched_dict[manga_name]["id"])

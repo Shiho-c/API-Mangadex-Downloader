@@ -67,15 +67,15 @@ class Manga():
                 img_name_list = os.listdir(current_chapdir)
                 img_name_list.sort(key=lambda f: int(re.sub('\D', '', f)))
                 img_list = []
-                im1 = Image.open(current_chapdir + "/" + img_name_list[0])
-                os.remove(current_chapdir + "/" + img_name_list[0] )
-                del img_name_list[0]
+                im1 = Image.new("RGB", (800, 1280), (255, 255, 255))
                 for x in img_name_list:
                     im2 = Image.open(current_chapdir + "/" + x)
                     object = im2.convert('RGB')
                     img_list.append(object)
+                    im2.close()
                     os.remove(current_chapdir + "/" + x)
                 im1.save(current_chapdir + "/" + current_iterated_chapter + ".pdf", "PDF" ,resolution=100.0, save_all=True, append_images=img_list)
+                im1.close()
                 print("{} {} has been converted to pdf file".format(key, current_iterated_chapter))
         
 class Window(QWidget):

@@ -6,6 +6,7 @@ from functools import partial
 
 from api_details import links, find_nani, tags
 from api_functions import fetch_base_url, fetch_titles, fetch_chaps
+from custom_functions import convert_to_pdf
 from PIL import Image
 import sys
 import re
@@ -13,21 +14,21 @@ import requests
 import time
 import os, errno
 from threading import Thread
-
+import queue
+from fpdf import FPDF
 manga_queue = {}
+
 class Manga():
     def __init__(self):
         super().__init__()
-    
-
+        
 
     def thread_download(self):
         t = Thread(target=self.download_image)
         t.start()
 
+
     def download_image(self):
-        #if not os.path.exists(self.title):
-            #os.makedirs(self.title)
         for key in manga_queue:
             for b in range(len(manga_queue[key]["Chapters"])):
                 current_iterated_chapter = manga_queue[key]["Chapters"][0]
@@ -62,22 +63,10 @@ class Manga():
                                         break
 
                                     handle.write(block)
-            
-                print("Converting {} {} to pdf file".format(key, current_iterated_chapter))
-                img_name_list = os.listdir(current_chapdir)
-                img_name_list.sort(key=lambda f: int(re.sub('\D', '', f)))
-                img_list = []
-                im1 = Image.open(current_chapdir + "/" + img_name_list[0])
-                os.remove(current_chapdir + "/" + img_name_list[0] )
-                del img_name_list[0]
-                for x in img_name_list:
-                    im2 = Image.open(current_chapdir + "/" + x)
-                    object = im2.convert('RGB')
-                    img_list.append(object)
-                    os.remove(current_chapdir + "/" + x)
-                im1.save(current_chapdir + "/" + current_iterated_chapter + ".pdf", "PDF" ,resolution=100.0, save_all=True, append_images=img_list)
-                print("{} {} has been converted to pdf file".format(key, current_iterated_chapter))
-        
+    
+                convert_to_pdf(current_chapdir, current_iterated_chapter)
+
+
 class Window(QWidget):
   
     def __init__(self,):
@@ -195,6 +184,7 @@ class Window(QWidget):
             manga_queue[self.last_selected_title][current_chapter] = {}
             manga_queue[self.last_selected_title][current_chapter]["base_url"] = fetch_base_url(self.searched_chaps_info, self.last_selected_title, current_chapter)
             manga_queue[self.last_selected_title][current_chapter]["image_list"] = self.searched_chaps[self.last_selected_title]["chapters"][current_chapter]
+        #print()
         m = Manga()
         m.thread_download()
             #base_url = fetch_base_url(self.searched_chaps_info, self.last_selected_title, current_chapter)
@@ -240,7 +230,7 @@ class Window(QWidget):
 
     def chapter_box_box_selectionChanged(self, item):
         if item.text() == self.last_selected_chapter:
-            #to stop the code from doing requests to the url since some people are autistic and triple clicks
+            #to stop the code from doing useless requests to the url since some people are autistic and triple clicks
             return
         self.last_selected_chapter = item.text()
 
@@ -256,7 +246,7 @@ class Window(QWidget):
 
     def title_box_selectionChanged(self, item):
         if item.text() == self.last_selected_title:
-            #to stop the code from doing requests to the url since some people are autistic and triple clicks
+            #to stop the code from doing useless requests to the url since some people are autistic and triple clicks
             return
         manga_name = item.text()
         self.last_selected_title = manga_name

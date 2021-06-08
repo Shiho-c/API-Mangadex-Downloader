@@ -5,18 +5,15 @@ from PyQt5.QtCore import *
 from functools import partial
 
 from api_details import links, find_nani, tags
-from api_functions import fetch_base_url, fetch_titles, fetch_chaps, fetch_key_hash
+from api_functions import fetch_base_url, fetch_titles, fetch_chaps, fetch_key_hash_manga, fetch_key_hash_chapter
 from PIL import Image
 import sys
 import re
 import requests
-import time
 import os, errno
 from threading import Thread
 import queue
-from fpdf import FPDF
 manga_queue = queue.Queue()
-
 
 class Window(QWidget):
   
@@ -24,26 +21,23 @@ class Window(QWidget):
         super().__init__()
   
         self.setWindowTitle("Python ")
-        t = Thread(target=self.manga_queue_worker)
+
+
+        t = Thread(target=self.manga_queue_worker, daemon = True)
         t.start()
         window_width, window_height = 794, 511
         window_startingpoint = 0
         self.setGeometry(window_startingpoint, window_startingpoint, window_width, window_height)
-        #self.setGeometry(window_startingpoint, window_startingpoint, window_width, window_height)
         self.UiComponents()
   
-        #no idea where to put variables
         self.searched_dict = {}
-        self.manga_info = {}
         self.clicked_manga_list = []
         self.tmp_data_dict = {}
         self.searched_chaps = {}
-        self.searched_chaps_info = {}
         self.last_selected_title = ""
         self.last_selected_chapter = ""
-        self.current_base_url = ""
         self.hidden_title_rows = []
-        # showing all the widgets
+        self.searched_cache = {}
         self.center()
         self.show()
         
@@ -57,16 +51,15 @@ class Window(QWidget):
         button.setStyleSheet("QPushButton:pressed {background-color: transparent;}")
         if change_image:
             button.setIcon(QtGui.QIcon(icon_dir))
-    def UiComponents(self):
 
-        # creating widgets
+
+    def UiComponents(self):
         self.title_listbox = QListWidget(self)
         self.chapter_listbox = QListWidget(self)
         self.chapter_listbox.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.search_box = QLineEdit(self)
         self.current_status = QLabel("Status: ",self )
         self.main_layout = QGridLayout(self)
-
         
         download_chapter_button = QPushButton("Download Chapter", self)
         download_manga_button = QPushButton("Download Manga", self)
@@ -140,23 +133,22 @@ class Window(QWidget):
 
     def manga_queue_worker(self):
         while True:
-            manga_name = manga_queue.get()
-            print(f'Working on {manga_name}')
-            os.makedirs(os.path.join(os.getcwd(), manga_name))
-            fetch_key_hash(manga_name, self.searched_dict)
-            print(f'Finished {manga_name}')
+            manga_info = manga_queue.get()
+            if manga_info[1] == "Chapter":
+                fetch_key_hash_chapter(manga_info[0], self.searched_cache, self.chapter_listbox.selectedItems())
+            elif manga_info[1] == "Manga":
+                fetch_key_hash_manga(manga_info[0], self.searched_cache)
             manga_queue.task_done()
 
 
     def clicked_download_manga(self):
-        manga_queue.put(self.last_selected_title)
+        manga_queue.put([self.last_selected_title, "Manga"])
         print(self.last_selected_title, " has been added to the queue list!")
-        #t = Thread(target=self.add_queue_info)
-        #t.start()
 
 
     def clicked_download_chapter(self):
-        pass
+        manga_queue.put([self.last_selected_title, "Chapter"])
+        print(self.last_selected_title, " has been added to the queue list!")
                     
 
     def clicked_search(self):
@@ -164,7 +156,6 @@ class Window(QWidget):
         self.hidden_title_rows.clear()
         self.title_listbox.clear()
         self.searched_dict.clear()
-        self.manga_info.clear()
         manga_title = self.search_box.text()
         if self.doujin_checkbox.isChecked():
             params = {"limit":100, "title":manga_title}
@@ -172,7 +163,7 @@ class Window(QWidget):
             params = {"limit":100, "title":manga_title, "excludedTags[]" : tags["Doujinshi"]}
         response = requests.get(links["search"], params=params)
         results = response.json()["results"]
-        fetch_titles(results, self.searched_dict, self.title_listbox)
+        fetch_titles(results, self.searched_dict, self.searched_cache, self.title_listbox)
             
 
 
@@ -195,14 +186,7 @@ class Window(QWidget):
             return
         self.last_selected_chapter = item.text()
 
-
         
-        manga_id = self.searched_chaps_info[self.last_selected_title][self.last_selected_chapter]["id"]
-        manga_hash = self.searched_chaps_info[self.last_selected_title][self.last_selected_chapter]["hash"]
-        response = requests.get(links["get_baseurl"].format(manga_id))
-        base_url = response.json()["baseUrl"]
-        self.current_base_url = "{}/data/{}/".format(base_url, manga_hash)
-
 
 
     def title_box_selectionChanged(self, item):
@@ -214,7 +198,7 @@ class Window(QWidget):
         if not manga_name in self.clicked_manga_list:
             self.clicked_manga_list.append(manga_name)
             self.chapter_listbox.clear()
-            t = Thread(target=fetch_chaps, args = (manga_name, self.searched_dict, self.searched_chaps, self.chapter_listbox))
+            t = Thread(target=fetch_chaps, args = (manga_name, self.searched_cache, self.searched_chaps, self.chapter_listbox))
             t.start()
 
                 
@@ -222,7 +206,6 @@ class Window(QWidget):
             self.chapter_listbox.clear()
             for chapters in self.searched_chaps[manga_name]["Chapters"]:
                 self.chapter_listbox.addItem(chapters)
-            #print("{} is already in the clicked titles\nClicked titles: {}".format(manga_name, self.clicked_dict))
           
 
 

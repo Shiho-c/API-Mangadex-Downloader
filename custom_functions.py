@@ -9,6 +9,7 @@ def convert_to_pdf(directory, current_chapter):
     w,h = 0,0
     files = glob.glob(directory + "/**/*.png", recursive=True)
     files += glob.glob(directory + "/**/*.jpg", recursive=True)
+    files += glob.glob(directory + "/**/*.jpeg", recursive=True)
     files.sort(key=os.path.getmtime)
     counter = 0
     for fname in files:
@@ -16,6 +17,7 @@ def convert_to_pdf(directory, current_chapter):
             cover = Image.open(fname)
             w,h = cover.size
             pdf = FPDF(unit = "pt", format = [w,h])
+            cover.close()
         
         pdf.add_page()
         pdf.image(fname,0,0,w,h)
@@ -41,4 +43,4 @@ def download_image(base_url, images, chapter_directory, current_chapter):
 
                     handle.write(block)
 
-    #convert_to_pdf(chapter_directory, current_chapter)
+    convert_to_pdf(chapter_directory, current_chapter)

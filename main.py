@@ -149,10 +149,12 @@ class Window(QWidget):
         self.manga_worker_1.queue_manga(self.last_selected_title, self.searched_cache)
 
     def clicked_download_chapter(self):
-        self.manga_worker_1.queue_chapter(self.last_selected_title, self.searched_cache, self.chapter_listbox.selectedItems())
+        tmp_clist = []
+        for c in self.chapter_listbox.selectedItems():
+            tmp_clist.append(c.text())
+        self.manga_worker_1.queue_chapter(self.last_selected_title, self.searched_cache, tmp_clist)
 
     def clicked_search(self):
-        #print(self.hidden_title_rows)
         self.hidden_title_rows.clear()
         self.title_listbox.clear()
         self.searched_dict.clear()

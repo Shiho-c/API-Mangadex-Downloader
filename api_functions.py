@@ -34,8 +34,6 @@ def fetch_titles(results, searched_dict, searched_cache, listbox):
 
 
 def fetch_key_hash_chapter(manga_name, manga_cache, manga_chapters):
-    print("Chapter dl has been triggered for ", manga_name)
-
     tmp_chaps = {}
     url = links["manga_feed"].format(manga_cache[manga_name]["id"])
     offset = 0
@@ -53,8 +51,7 @@ def fetch_key_hash_chapter(manga_name, manga_cache, manga_chapters):
         max_result = len(result)
         offset += 500
 
-    for chapter in manga_chapters:
-        current_chapter = chapter.text()
+    for current_chapter in manga_chapters:
         print("Downloading {} {}".format(manga_name, current_chapter))
         chapter_path = os.path.join(os.getcwd(), manga_name, current_chapter)
         os.makedirs(chapter_path)
@@ -65,7 +62,6 @@ def fetch_key_hash_chapter(manga_name, manga_cache, manga_chapters):
 
 
 def fetch_key_hash_manga(manga_name, searched_dict):
-    print("Manga dl has been triggered for ", manga_name)
     if path.exists(os.path.join(os.getcwd(), manga_name)):
         return
     
@@ -117,6 +113,5 @@ def fetch_chaps(manga_name, searched_dict, searched_chaps, listbox):
         offset += 500
     for a in local_c_list:
         listbox.addItem(a)
-    print("isDone")
 
 

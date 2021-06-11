@@ -43,7 +43,7 @@ def download_image(base_url, images, chapter_directory, current_chapter):
 
                     handle.write(block)
 
-    #convert_to_pdf(chapter_directory, current_chapter)
+    convert_to_pdf(chapter_directory, current_chapter)
 
 
 

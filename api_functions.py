@@ -32,12 +32,15 @@ def fetch_titles(results, searched_dict, searched_cache, listbox):
     for title in searched_dict:
         listbox.addItem(title)
 
-def fetch_key_hash_chapter(manga_name, searched_dict, chapters_list):
+
+def fetch_key_hash_chapter(manga_name, manga_cache, manga_chapters):
+    print("Chapter dl has been triggered for ", manga_name)
+
     tmp_chaps = {}
-    url = links["manga_feed"].format(searched_dict[manga_name]["id"])
+    url = links["manga_feed"].format(manga_cache[manga_name]["id"])
     offset = 0
     max_result = 500
-    params = {"limit":500, "order[chapter]" : "asc", "translatedLanguage[]" : "en", "offset": offset}
+    params = {"limit": 500, "order[chapter]": "asc", "translatedLanguage[]": "en", "offset": offset}
     while max_result == 500:
         params["offset"] = offset
         response = requests.get(url, params=params)
@@ -48,21 +51,21 @@ def fetch_key_hash_chapter(manga_name, searched_dict, chapters_list):
             tmp_chaps["Chapter " + str(result[x]['data']['attributes']['chapter'])]["hash"] = result[x]['data']['attributes']['hash']              
             tmp_chaps["Chapter " + str(result[x]['data']['attributes']['chapter'])]["images"] = result[x]['data']['attributes']['data']
         max_result = len(result)
-        offset+=500
-    
-    for chapters in chapters_list:
-        manga_chapter = chapters.text()
-        print("Downloading {} {}".format(manga_name, manga_chapter))
-        chapter_path = os.path.join(os.getcwd(), manga_name, manga_chapter)
+        offset += 500
+
+    for chapter in manga_chapters:
+        current_chapter = chapter.text()
+        print("Downloading {} {}".format(manga_name, current_chapter))
+        chapter_path = os.path.join(os.getcwd(), manga_name, current_chapter)
         os.makedirs(chapter_path)
 
-        base_url = fetch_base_url(tmp_chaps[manga_chapter]["id"], tmp_chaps[manga_chapter]["hash"]) + "/"
+        base_url = fetch_base_url(tmp_chaps[current_chapter]["id"], tmp_chaps[current_chapter]["hash"]) + "/"
 
-        download_image(base_url, tmp_chaps[manga_chapter]["images"], chapter_path, manga_chapter)
-        
+        download_image(base_url, tmp_chaps[current_chapter]["images"], chapter_path, current_chapter)
 
 
 def fetch_key_hash_manga(manga_name, searched_dict):
+    print("Manga dl has been triggered for ", manga_name)
     if path.exists(os.path.join(os.getcwd(), manga_name)):
         return
     
@@ -71,8 +74,7 @@ def fetch_key_hash_manga(manga_name, searched_dict):
     url = links["manga_feed"].format(searched_dict[manga_name]["id"])
     max_result = 500
     offset = 0 
-    params = {"limit":500, "order[chapter]" : "asc", "translatedLanguage[]" : "en", "offset": offset}
-
+    params = {"limit": 500, "order[chapter]" : "asc", "translatedLanguage[]": "en", "offset": offset}
 
     while max_result == 500:
         params["offset"] = offset
@@ -90,29 +92,31 @@ def fetch_key_hash_manga(manga_name, searched_dict):
             download_image(base_url, images, chapter_directory, manga_chapter)
             
         max_result = len(result)
-        offset+=500
+        offset += 500
     print("Finished downloading manga: ", manga_name)
-
 
 
 def fetch_chaps(manga_name, searched_dict, searched_chaps, listbox):
     url = links["manga_feed"].format(searched_dict[manga_name]["id"])
     offset = 0
     
-    params = {"limit":500, "order[chapter]" : "asc", "translatedLanguage[]" : "en", "offset": offset}
+    params = {"limit": 500, "order[chapter]" : "asc", "translatedLanguage[]": "en", "offset": offset}
     max_result = 500
     searched_chaps[manga_name] = {}
     searched_chaps[manga_name]["Chapters"] = []
+    local_c_list = []
     while max_result == 500:
         params["offset"] = offset
         response = requests.get(url, params=params)
         result = response.json()['results']
         for x in range(len(result)):
-            #searched_chaps[manga_name]["chapters"]["Chapter " + str(result[x]['data']['attributes']['chapter'])] = result[x]['data']['attributes']['data']
-            #create a new key called chapter then  store manga id and hash there 
             searched_chaps[manga_name]["Chapters"].append("Chapter " + str(result[x]['data']['attributes']['chapter']))
-            listbox.addItem("Chapter " + str(result[x]['data']['attributes']['chapter']))
+
+            local_c_list.append("Chapter " + str(result[x]['data']['attributes']['chapter']))
         max_result = len(result)
-        offset+=500
+        offset += 500
+    for a in local_c_list:
+        listbox.addItem(a)
+    print("isDone")
 
 

@@ -1,8 +1,7 @@
-from PyQt5.QtWidgets import * 
+from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtGui import * 
-from PyQt5.QtCore import * 
-from functools import partial
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 
 from api_details import links, find_nani, tags
 from api_functions import fetch_base_url, fetch_titles, fetch_chaps, fetch_key_hash_manga, fetch_key_hash_chapter
@@ -10,26 +9,53 @@ from PIL import Image
 import sys
 import re
 import requests
-import os, errno
+import os
 from threading import Thread
 import queue
-manga_queue = queue.Queue()
+import faulthandler
+faulthandler.enable()
+
+
+class MangaWorker(QThread):
+    def __init__(self, parent=None):
+        QtCore.QThread.__init__(self, parent)
+        self.queue = queue.Queue(maxsize=0)
+
+    def run(self):
+        while True:
+            item = self.queue.get()
+            mode = item[0]
+            manga_name = item[1]
+            manga_cache = item[2]
+            if mode == "Chapter":
+                manga_chapters = item[3]
+                fetch_key_hash_chapter(manga_name, manga_cache, manga_chapters)
+            else:
+                fetch_key_hash_manga(manga_name, manga_cache)
+            self.queue.task_done()
+
+    def queue_chapter(self, manga_name, manga_cache, manga_chapters):
+        print("{} {} has been queued!".format(manga_name, manga_chapters))
+        self.queue.put(["Chapter", manga_name, manga_cache, manga_chapters])
+
+    def queue_manga(self, manga_name, manga_cache):
+        print("{} has been queued!".format(manga_name))
+        self.queue.put(["Manga", manga_name, manga_cache])
+
 
 class Window(QWidget):
-  
+
     def __init__(self,):
         super().__init__()
-  
+
         self.setWindowTitle("Python ")
-
-
-        t = Thread(target=self.manga_queue_worker, daemon = True)
-        t.start()
         window_width, window_height = 794, 511
         window_startingpoint = 0
         self.setGeometry(window_startingpoint, window_startingpoint, window_width, window_height)
-        self.UiComponents()
-  
+        self.ui_components()
+        self.manga_worker_1 = MangaWorker()
+        self.manga_worker_1.start()
+
         self.searched_dict = {}
         self.clicked_manga_list = []
         self.tmp_data_dict = {}
@@ -38,10 +64,11 @@ class Window(QWidget):
         self.last_selected_chapter = ""
         self.hidden_title_rows = []
         self.searched_cache = {}
+        self.chapters_pressed = []
         self.center()
         self.show()
-        
-        
+
+
     def closeEvent(self, event):
         pass
 
@@ -52,15 +79,14 @@ class Window(QWidget):
         if change_image:
             button.setIcon(QtGui.QIcon(icon_dir))
 
-
-    def UiComponents(self):
+    def ui_components(self):
         self.title_listbox = QListWidget(self)
         self.chapter_listbox = QListWidget(self)
         self.chapter_listbox.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.search_box = QLineEdit(self)
-        self.current_status = QLabel("Status: ",self )
+        self.current_status = QLabel("Status: ", self )
         self.main_layout = QGridLayout(self)
-        
+
         download_chapter_button = QPushButton("Download Chapter", self)
         download_manga_button = QPushButton("Download Manga", self)
         search_button = QPushButton("Search", self)
@@ -68,13 +94,11 @@ class Window(QWidget):
         chapter_header = QLabel("Chapters: ",self )
         self.doujin_checkbox = QCheckBox("Doujinshi", self)
         self.chapter_numbers = QLineEdit("Input the chapters here ex: 20-50", self)
-        
-        
+
+
         self.set_button_flat(search_button, True, "components/search.png")
         self.set_button_flat(download_chapter_button, True, "components/download.png")
         self.set_button_flat(download_manga_button, True, "components/download.png")
-
-
 
         self.main_layout.addWidget(self.current_status,0, 0)
         # second row. We use a QHBoxlayout to layout the QLineEdit and the two buttons
@@ -104,52 +128,28 @@ class Window(QWidget):
         self.title_listbox.itemClicked.connect(self.title_box_selectionChanged)
         self.chapter_listbox.itemClicked.connect(self.chapter_box_box_selectionChanged)
         self.doujin_checkbox.stateChanged.connect(self.doujin_checkboxToggled)
-        
+
         titles_scrollbar = QScrollBar(self)
         chapters_scrollbar = QScrollBar(self)
-  
+
         # setting style sheet to the scroll bar
         titles_scrollbar.setStyleSheet("background : lightgreen;")
         chapters_scrollbar.setStyleSheet("background : lightgreen;")
-  
+
         # setting vertical scroll bar to it
         self.title_listbox.setVerticalScrollBar(titles_scrollbar)
         self.chapter_listbox.setVerticalScrollBar(chapters_scrollbar)
-  
-  
+
+
         # getting vertical scroll bar
         value = self.title_listbox.verticalScrollBar()
         value2 = self.chapter_listbox.verticalScrollBar()
 
-
-
-    def center(self):
-        frameGm = self.frameGeometry()
-        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
-        centerPoint = QApplication.desktop().screenGeometry(screen).center()
-        frameGm.moveCenter(centerPoint)
-        self.move(frameGm.topLeft())
-        
-
-    def manga_queue_worker(self):
-        while True:
-            manga_info = manga_queue.get()
-            if manga_info[1] == "Chapter":
-                fetch_key_hash_chapter(manga_info[0], self.searched_cache, self.chapter_listbox.selectedItems())
-            elif manga_info[1] == "Manga":
-                fetch_key_hash_manga(manga_info[0], self.searched_cache)
-            manga_queue.task_done()
-
-
     def clicked_download_manga(self):
-        manga_queue.put([self.last_selected_title, "Manga"])
-        print(self.last_selected_title, " has been added to the queue list!")
-
+        self.manga_worker_1.queue_manga(self.last_selected_title, self.searched_cache)
 
     def clicked_download_chapter(self):
-        manga_queue.put([self.last_selected_title, "Chapter"])
-        print(self.last_selected_title, " has been added to the queue list!")
-                    
+        self.manga_worker_1.queue_chapter(self.last_selected_title, self.searched_cache, self.chapter_listbox.selectedItems())
 
     def clicked_search(self):
         #print(self.hidden_title_rows)
@@ -164,8 +164,6 @@ class Window(QWidget):
         response = requests.get(links["search"], params=params)
         results = response.json()["results"]
         fetch_titles(results, self.searched_dict, self.searched_cache, self.title_listbox)
-            
-
 
     def doujin_checkboxToggled(self):
         if self.doujin_checkbox.isChecked() == True:
@@ -177,17 +175,13 @@ class Window(QWidget):
         else:
             for x in self.hidden_title_rows:
                 self.title_listbox.setRowHidden(x, False)
-                    
-    
 
     def chapter_box_box_selectionChanged(self, item):
         if item.text() == self.last_selected_chapter:
             #to stop the code from doing useless requests to the url since some people are autistic and triple clicks
             return
+
         self.last_selected_chapter = item.text()
-
-        
-
 
     def title_box_selectionChanged(self, item):
         if item.text() == self.last_selected_title:
@@ -195,28 +189,24 @@ class Window(QWidget):
             return
         manga_name = item.text()
         self.last_selected_title = manga_name
-        if not manga_name in self.clicked_manga_list:
+        if manga_name not in self.clicked_manga_list:
             self.clicked_manga_list.append(manga_name)
             self.chapter_listbox.clear()
-            t = Thread(target=fetch_chaps, args = (manga_name, self.searched_cache, self.searched_chaps, self.chapter_listbox))
-            t.start()
-
-                
+            t = Thread(target=fetch_chaps, args=(manga_name, self.searched_cache, self.searched_chaps, self.chapter_listbox)).start()
         else:
             self.chapter_listbox.clear()
             for chapters in self.searched_chaps[manga_name]["Chapters"]:
                 self.chapter_listbox.addItem(chapters)
-          
+
+    def center(self):
+        frame_gm = self.frameGeometry()
+        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
+        center_point = QApplication.desktop().screenGeometry(screen).center()
+        frame_gm.moveCenter(center_point)
+        self.move(frame_gm.topLeft())
 
 
-
-    
-  
-# create pyqt5 app
 App = QApplication(sys.argv)
-  
-# create the instance of our Window
+
 window = Window()
-  
-# start the app
 sys.exit(App.exec())

@@ -121,7 +121,7 @@ class Window(QWidget):
         self.main_layout.addWidget(self.chapter_numbers, 4, 1)
         manga_header.setFont(QFont("Yu Gothic UI Light", 16))
         chapter_header.setFont(QFont("Yu Gothic UI Light", 16))
-        #setting up widgets' functions / signals
+        #setting up widgets' functions / signalss
         search_button.clicked.connect(self.clicked_search)
         download_chapter_button.clicked.connect(self.clicked_download_chapter)
         download_manga_button.clicked.connect(self.clicked_download_manga)

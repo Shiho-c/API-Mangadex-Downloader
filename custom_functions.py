@@ -30,18 +30,18 @@ def download_image(base_url, images, chapter_directory, current_chapter):
     for x in range(len(images)):
         image = images[x]
         with open('{}/{}.{}'.format(chapter_directory, x, image[-3:]), 'wb+') as handle:
-                download_url = base_url + image
-                response = requests.get(download_url, stream=True)
+            download_url = base_url + image
+            response = requests.get(download_url, stream=True)
 
 
-                if not response.ok:
-                    pass
+            if not response.ok:
+                pass
 
-                for block in response.iter_content(1024):
-                    if not block:
-                        break
+            for block in response.iter_content(1024):
+                if not block:
+                    break
 
-                    handle.write(block)
+                handle.write(block)
 
     convert_to_pdf(chapter_directory, current_chapter)
 

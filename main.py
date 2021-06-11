@@ -136,12 +136,8 @@ class Window(QWidget):
         titles_scrollbar.setStyleSheet("background : lightgreen;")
         chapters_scrollbar.setStyleSheet("background : lightgreen;")
 
-        # setting vertical scroll bar to it
         self.title_listbox.setVerticalScrollBar(titles_scrollbar)
         self.chapter_listbox.setVerticalScrollBar(chapters_scrollbar)
-
-
-        # getting vertical scroll bar
         value = self.title_listbox.verticalScrollBar()
         value2 = self.chapter_listbox.verticalScrollBar()
 

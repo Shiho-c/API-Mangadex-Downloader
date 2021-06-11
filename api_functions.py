@@ -5,11 +5,13 @@ from threading import Thread
 from api_details import links, find_nani, tags
 from custom_functions import download_image
 
+
 def fetch_base_url(manga_id, manga_hash):
     response = requests.get(links["get_baseurl"].format(manga_id))
     base_url = response.json()["baseUrl"]
     final_base_url = "{}/data/{}/".format(base_url, manga_hash)
     return final_base_url
+
 
 def fetch_titles(results, searched_dict, searched_cache, listbox):
     for x in range(len(results)):
